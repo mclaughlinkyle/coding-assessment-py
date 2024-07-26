@@ -22,6 +22,14 @@ class Coordinate:
     # Returns the x and y
     def get_coordinates(self)-> tuple[int, int]:
         return int(self.__x), int(self.__y)
+    
+    # Converts the coordinates given in the input file of the visual placement of the node
+    # to the coordinates used in the Graph
+    def convert_coordinates(self, max_coordinate):
+        mx, my = max_coordinate.get_coordinates()
+        x, y = self.get_coordinates()
+        self.set_x(abs(y - my))
+        self.set_y(x)
 
     def __eq__(self, coordinate: object) -> bool:
         return self.get_coordinates() == coordinate.get_coordinates()
@@ -31,17 +39,12 @@ class Coordinate:
 
 # Node in our graph
 class Node:
-    """ 
-    @parameters string identifier: the character symbol representing the node
-                int x: the x coordinate of the node
-                int y: the y coordinate of the node
-    """
     def __init__(self, identifier: str, coordinate: Coordinate):
-        self.__identifier = identifier
-        self.__coordinate = coordinate
+        self.__identifier: str = identifier
+        self.__coordinate: Coordinate = coordinate
 
     # Returns the directions of this node
-    def get_directions(self):
+    def get_directions(self) -> list[str]:
         # Nodes with all directions
         if self.__identifier == '*' or self.__identifier.isalpha():
             return { "left", "right", "up", "down" }
@@ -62,7 +65,7 @@ class Node:
         return node_directions[self.__identifier]
 
     # Returns true if the other_node is connected to this node
-    def is_connected_to(self, other_node, direction):
+    def is_connected_to(self, other_node, direction) -> bool:
         # Define the opposite direction
         opposites = { 
             "up": "down", 
@@ -73,7 +76,7 @@ class Node:
         return direction in self.get_directions() and opposites[direction] in other_node.get_directions()
     
     # Returns the identifier
-    def get_identifier(self):
+    def get_identifier(self) -> str:
         return self.__identifier
     
     # Returns the x and y
@@ -83,32 +86,15 @@ class Node:
     def get_coordinate(self) -> Coordinate:
         return self.__coordinate
     
-    # Converts the coordinates given in the input file of the visual placement of the node
-    # to the coordinates used in the Graph
-    def convert_coordinates(self, max_coordinate: Coordinate):
-        mx, my = max_coordinate.get_coordinates()
-        x, y = self.__coordinate.get_coordinates()
-        self.__coordinate.set_x(abs(y - my))
-        self.__coordinate.set_y(x)
-    
     def __repr__(self):
         return "Node '{}' at {}".format(self.__identifier, self.get_coordinate())
     
 # Graph / grid of the nodes and edges
 # 2 Dimensional
 class Graph2D:
-    def __init__(self, nodes: list):
-        self.__nodes = nodes
-        max_x, max_y = 0, 0
+    def __init__(self):
+        self.__nodes = []
         
-        for node in nodes:
-            x, y = node.get_coordinates()
-            max_x = max(max_x, x)
-            max_y = max(max_y, y)
-        
-        for node in nodes:
-            node.convert_coordinates(Coordinate(max_x, max_y))
-
     def get_node_at_coordinate(self, coordinate: Coordinate) -> Node:
         for node in self.__nodes:
             if node.get_coordinate() == coordinate:
@@ -149,6 +135,20 @@ class Graph2D:
     def get_nodes(self):
         return self.__nodes
     
+    def convert_nodes_from_input(self):
+        max_x, max_y = 0, 0
+
+        # get the max x and y of all nodes
+        for node in self.__nodes:
+            x, y = node.get_coordinates()
+            max_x = max(max_x, x)
+            max_y = max(max_y, y)
+        
+        # convert coordinates from the input file way of giving coordinates, 
+        # where the bottom row visually is y=0, the bottom row in code is going to be the highest index
+        for node in self.__nodes:
+            node.get_coordinate().convert_coordinates(Coordinate(max_x, max_y))
+    
     def get_connected_sinks(self):
         source = None
         sinks = set()
@@ -180,22 +180,31 @@ class Graph2D:
                 connected_sinks.append(node)
 
         return connected_sinks
+    
+    # Returns sinks as string, sorted alphabetically
+    def get_connected_sinks_as_str(self):
+        sinks = ""
+        for node in self.get_connected_sinks():
+            sinks += str(node.get_identifier())
 
+        return ''.join(sorted(sinks))
+
+# Returns string of all connected sinks in alphabetical order
+# @param file_path string is the file path of the input file
 def get_connected_sinks(file_path: str) -> str:
-    nodes = []
+    graph = Graph2D()
 
     with open(file_path, 'r', encoding='UTF-8') as file:
         while line := file.readline():
             vars = line.rstrip().split(' ')
-            nodes.append(Node(vars[0], Coordinate(vars[1], vars[2])))
+            graph.get_nodes().append(Node(vars[0], Coordinate(vars[1], vars[2])))
 
-    graph = Graph2D(nodes)
+    # Coords are given with the y inverted, 
+    # where visually y=0 is the bottom row, but in code that is the highest index
+    graph.convert_nodes_from_input()
 
-    sinks = ""
-    for node in graph.get_connected_sinks():
-        sinks += str(node.get_identifier())
-
-    return ''.join(sorted(sinks))
+    # Return resulting string
+    return graph.get_connected_sinks_as_str()
 
 if __name__ == "__main__":
     print(get_connected_sinks("C:/Users/klye/Documents/Code/coding-assessment-py/input.txt"))
