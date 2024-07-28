@@ -207,4 +207,4 @@ def get_connected_sinks(file_path: str) -> str:
     return graph.get_connected_sinks_as_str()
 
 if __name__ == "__main__":
-    print(get_connected_sinks("C:/Users/klye/Documents/Code/coding-assessment-py/input.txt"))
+    print(get_connected_sinks("input.txt"))
